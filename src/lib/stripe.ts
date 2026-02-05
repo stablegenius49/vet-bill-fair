@@ -12,9 +12,8 @@ export function getStripeClient() {
     throw new Error("Missing STRIPE_SECRET_KEY");
   }
 
-  stripe = new Stripe(secretKey, {
-    apiVersion: "2024-06-20",
-  });
+  // Let the installed Stripe SDK select its pinned API version.
+  stripe = new Stripe(secretKey);
 
   return stripe;
 }
