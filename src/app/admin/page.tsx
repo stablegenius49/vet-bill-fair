@@ -1,6 +1,7 @@
 import AdminTable from "./table";
 import styles from "./admin.module.css";
 import Link from "next/link";
+import { Suspense } from "react";
 
 export default function AdminPage() {
   return (
@@ -9,7 +10,9 @@ export default function AdminPage() {
         <Link href="/">Vet Bill Fair</Link>
         <span>Admin Console</span>
       </header>
-      <AdminTable />
+      <Suspense fallback={<div className={styles.card}>Loading…</div>}>
+        <AdminTable />
+      </Suspense>
     </div>
   );
 }

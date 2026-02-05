@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import styles from "./admin.module.css";
+import { useSearchParams } from "next/navigation";
 
 type Order = {
   id: string;
@@ -16,6 +17,7 @@ type Order = {
 };
 
 export default function AdminTable() {
+  const searchParams = useSearchParams();
   const [token, setToken] = useState("");
   const [orders, setOrders] = useState<Order[]>([]);
   const [statusUpdates, setStatusUpdates] = useState<Record<string, string>>({});
@@ -80,10 +82,21 @@ export default function AdminTable() {
   }
 
   useEffect(() => {
+    // Hydrate token from URL (?token=...) or localStorage for convenience.
+    const fromUrl = searchParams.get("token");
+    const fromStorage =
+      typeof window !== "undefined" ? window.localStorage.getItem("adminToken") : null;
+
+    if (!token && (fromUrl || fromStorage)) {
+      setToken(fromUrl || fromStorage || "");
+      return;
+    }
+
     if (token) {
+      window.localStorage.setItem("adminToken", token);
       fetchOrders();
     }
-  }, [token]);
+  }, [token, searchParams]);
 
   return (
     <div className={styles.card}>
@@ -98,6 +111,13 @@ export default function AdminTable() {
           {loading ? "Loading" : "Refresh"}
         </button>
       </div>
+
+      {!token && (
+        <div className={styles.message}>
+          Enter your <strong>ADMIN_TOKEN</strong> to load orders. You can also open
+          <code> /admin?token=YOUR_TOKEN</code>.
+        </div>
+      )}
 
       {message && <div className={styles.message}>{message}</div>}
 
