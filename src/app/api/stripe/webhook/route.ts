@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getStripeClient } from "@/lib/stripe";
 import prisma from "@/lib/prisma";
 import Stripe from "stripe";
+import { buildPaymentReceivedEmail, getEmailFrom, getEmailReplyTo, getResendClient } from "@/lib/email";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -31,7 +32,7 @@ export async function POST(req: Request) {
       const orderId = session.metadata?.orderId;
 
       if (orderId) {
-        await prisma.order.update({
+        const order = await prisma.order.update({
           where: { id: orderId },
           data: {
             status: "paid",
@@ -42,6 +43,40 @@ export async function POST(req: Request) {
                 : session.payment_intent?.id,
           },
         });
+
+        // Send confirmation email once (idempotent).
+        if (!order.confirmationEmailSentAt) {
+          try {
+            const resend = getResendClient();
+            const from = getEmailFrom();
+            const replyTo = getEmailReplyTo();
+            const appUrl = process.env.APP_URL || "";
+
+            const { subject, text } = buildPaymentReceivedEmail({
+              appUrl,
+              orderId: order.id,
+            });
+
+            const sent = await resend.emails.send({
+              from,
+              to: order.email,
+              subject,
+              text,
+              replyTo,
+            });
+
+            await prisma.order.update({
+              where: { id: order.id },
+              data: {
+                confirmationEmailId: sent.data?.id ?? null,
+                confirmationEmailSentAt: new Date(),
+              },
+            });
+          } catch (err) {
+            // Don't fail the webhook if email fails; log and continue.
+            console.error("stripe/webhook email", err);
+          }
+        }
       }
     }
 

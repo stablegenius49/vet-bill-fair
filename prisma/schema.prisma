@@ -18,6 +18,10 @@ model Order {
   uploadSize             Int?
   stripeSessionId        String?
   stripePaymentIntentId  String?
+
+  confirmationEmailId    String?
+  confirmationEmailSentAt DateTime?
+
   createdAt              DateTime @default(now())
   updatedAt              DateTime @updatedAt
 }
